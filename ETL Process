@@ -1,0 +1,188 @@
+import pandas as pd
+from sqlalchemy import create_engine
+
+conn_url = 'postgresql://postgres:pwd4APAN5310@localhost/5310 Project'
+
+engine = create_engine(conn_url)
+
+connection = engine.connect()
+
+stmt = """ 
+            DROP TABLE IF EXISTS state CASCADE;
+            DROP TABLE IF EXISTS salesteam CASCADE;
+            DROP TABLE IF EXISTS product_storelocation CASCADE;
+            DROP TABLE IF EXISTS order_product CASCADE;
+            DROP TABLE IF EXISTS product CASCADE;
+            DROP TABLE IF EXISTS customer CASCADE;
+            DROP TABLE IF EXISTS orders CASCADE;
+            DROP TABLE IF EXISTS order_store CASCADE;
+            DROP TABLE IF EXISTS store_location CASCADE;
+
+            CREATE TABLE state(
+                    statecode  varchar(10),
+                    state      Varchar(50),
+                    region     Varchar(20),
+                    PRIMARY KEY (statecode)
+                );
+
+           CREATE TABLE salesteam(
+                    sales_teamid   varchar(10),
+                    salesteam        Varchar(50),
+                    region           Varchar(20),
+                    PRIMARY KEY (sales_teamid)
+                    );
+
+            CREATE TABLE product_storelocation(
+                    Product_ID     varchar(10),
+                    storeID    varchar(10),
+                    PRIMARY KEY (Product_ID,storeID)
+                    );
+
+            CREATE TABLE order_product(
+                    Order_number   varchar(20),
+                    Product_ID     varchar(10),
+                    PRIMARY KEY (Order_number, Product_ID)
+                    );
+
+             Create table Product(
+                    Product_ID     varchar(10),
+                    Product_name  varchar(20),
+                    primary key (Product_ID)
+                    );
+
+            Create table Customer(
+                    Customer_ID        varchar(10),
+                    customer_names     Varchar(50),
+                    Primary Key (Customer_ID)
+                    );
+
+            Create TABLE orders(
+                    Order_number    varchar(20),
+                    procureddate   Date,
+                    OrderDate      Date,
+                    Shipdate       Date,
+                    DeliveryDate    Date,
+                    UnitPrice       numeric(10,5),
+                    UnitCost        numeric(10,5),
+                    Discount_Applied numeric(5,3),
+                    CurrencyCode    varchar(5),
+                    Order_quantity   INT,
+                    Customer_ID        varchar(10),
+                    Sales_Channel     varchar(20),
+                    WarehouseCode     varchar(255),
+                    Sales_TeamID     varchar(10),
+                    Primary Key     (Order_number),
+                    Foreign Key     (Customer_ID) references Customer(Customer_ID),
+                    Foreign Key     (Sales_TeamID) references Salesteam(Sales_TeamID)
+                    );
+                    
+            CREATE TABLE order_store(
+                    Order_number    varchar(20),
+                    storeID    varchar(10),
+                    PRIMARY KEY (Order_number, storeID)
+                    );
+
+           CREATE TABLE store_location(
+                  storeID    varchar(10),
+                  county     varchar(100),
+                  cityname   varchar(50),
+                  StateCode  varchar(10),
+                  latitude    numeric(10),
+                  longitude   numeric(10),
+                  areacode    varchar(10),
+                  timezone    varchar(50),
+                  population        numeric(10),
+                  household_income  numeric(10),
+                  median_income     numeric(10),
+                  PRIMARY KEY (storeid),
+                  Foreign Key (statecode) references state(statecode)
+                  );
+"""
+connection.execute(stmt)
+
+#table state
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Regions Sheet')
+state = df[['StateCode', 'State','Region']]
+state.rename(columns={'State':'state', 'Region':'region', 'StateCode':'statecode'},inplace=True)
+state.head()
+
+state.to_sql(name='state', con=engine, if_exists='append', index=False) 
+
+#table salesteam 
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Sales Team Sheet')
+salesteam = df[['_SalesTeamID','Sales Team', 'Region']]
+salesteam.rename(columns={'_SalesTeamID':'sales_teamid', 'Sales Team':'salesteam' , 'Region':'region'},inplace=True)
+salesteam.head()
+
+salesteam.to_sql(name='salesteam', con=engine, if_exists='append', index=False) 
+
+#table product
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Products Sheet')
+product = df[['_ProductID', 'Product Name']]
+product.rename(columns={'_ProductID': 'Product_ID', 'Product Name': 'Product_name'},inplace=True)
+product.columns = product.columns.str.lower()
+product.head()
+
+product.to_sql(name='product', con=engine, if_exists='append', index=False) 
+
+#table customers
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Customers Sheet')
+customer = df[['_CustomerID', 'Customer Names']]
+customer.rename(columns={'_CustomerID': 'Customer_ID', 'Customer Names': 'Customer_Names'},inplace=True)
+customer.columns = customer.columns.str.lower()
+customer.head()
+
+customer.to_sql(name='customer', con=engine, if_exists='append', index=False) 
+
+#table store_location
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Store Locations Sheet')
+store_location = df[['_StoreID', 'County', 'City Name', 'StateCode', 'Latitude', 'Longitude', 'AreaCode', 'Time Zone', 'Population', 'Household Income', 'Median Income']]
+store_location.rename(columns={'_StoreID': 'StoreID', 'City Name': 'CityName', 'Time Zone' : 'TimeZone', 'Household Income' :'Household_Income', 'Median Income': 'Median_Income'},inplace=True)
+store_location.columns = store_location.columns.str.lower()
+store_location.head()
+
+store_location.to_sql(name='store_location', con=engine, if_exists='append', index=False) 
+
+#table5 orders
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Sales Orders Sheet')
+orders = df[['OrderNumber','ProcuredDate','OrderDate','ShipDate','DeliveryDate','Unit Price','Unit Cost',\
+             'Discount Applied','CurrencyCode','Order Quantity', '_CustomerID','Sales Channel','WarehouseCode',\
+            '_SalesTeamID']]
+
+orders.rename(columns={'OrderNumber': 'order_number','_ProductID': 'product_id','Discount Applied':'discount_applied',
+                             'Sales Channel':'sales_channel','_CustomerID':'customer_id',
+                             'Unit Price':'unitprice','Unit Cost':'unitcost',
+                             '_SalesTeamID':'Sales_TeamID','Order Quantity':'Order_quantity'},inplace=True)
+orders.columns=orders.columns.str.lower()
+
+orders.head()
+
+orders.to_sql(name='orders', con=engine, if_exists='append', index=False) 
+
+#table order_product
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Sales Orders Sheet')
+order_product = df[['OrderNumber', '_ProductID']]
+order_product.rename(columns={'OrderNumber': 'Order_number', '_ProductID': 'Product_ID'},inplace=True)
+order_product.columns = order_product.columns.str.lower()
+order_product.head()
+
+order_product.to_sql(name='order_product', con=engine, if_exists='append', index=False)
+
+#table product_storelocation
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Sales Orders Sheet')
+product_storelocation = df[['_StoreID', '_ProductID']]
+product_storelocation.rename(columns={'_StoreID': 'storeID', '_ProductID': 'Product_ID'},inplace=True)
+product_storelocation = product_storelocation.drop_duplicates()
+product_storelocation.columns = product_storelocation.columns.str.lower()
+product_storelocation.head()
+
+product_storelocation.to_sql(name='product_storelocation', con=engine, if_exists='append', index=False) 
+
+#table order_store
+df = pd.read_excel(r'US_Regional_Sales_Data.xlsx', sheet_name='Sales Orders Sheet')
+order_store = df[['OrderNumber', '_StoreID']]
+order_store.rename(columns={'OrderNumber': 'Order_number', '_StoreID': 'storeID'},inplace=True)
+order_store.columns = order_store.columns.str.lower()
+order_store.head()
+
+order_store.to_sql(name='order_store', con=engine, if_exists='append', index=False)
