@@ -1,0 +1,310 @@
+#1. What is the seasonality of the sales throughout a year in different regions, if any? 
+
+queryCmd = """SELECT o.orderdate, count(o.order_number) as number, s.region
+                FROM orders o, salesteam s
+                WHERE s.region = 'Midwest'
+                GROUP BY orderdate, s.region
+                ORDER BY orderdate DESC;
+           """
+cur.execute(queryCmd)
+conn.commit()
+
+results = connection.execute(queryCmd).fetchall()
+column_names = results[0].keys()
+df1 = pd.DataFrame(results, columns = column_names)
+df1
+queryCmd2 = """SELECT o.orderdate, 
+                      count(o.order_number) as number, s.region
+                FROM orders o, salesteam s
+                WHERE s.region = 'Northeast'
+                GROUP BY orderdate, s.region
+                ORDER BY orderdate DESC;
+           """
+cur.execute(queryCmd2)
+conn.commit()
+
+
+results = connection.execute(queryCmd2).fetchall()
+column_names = results[0].keys()
+df2 = pd.DataFrame(results, columns = column_names)
+df2
+
+queryCmd3 = """SELECT o.orderdate, count(o.order_number) as number, s.region
+                FROM orders o, salesteam s
+                WHERE s.region = 'West'
+                GROUP BY orderdate, s.region
+                ORDER BY orderdate DESC;
+           """
+cur.execute(queryCmd3)
+conn.commit()
+results = connection.execute(queryCmd3).fetchall()
+column_names = results[0].keys()
+df3 = pd.DataFrame(results, columns = column_names)
+df3
+
+queryCmd4 = """SELECT o.orderdate, count(o.order_number) as number, s.region
+                FROM orders o, salesteam s
+                WHERE s.region = 'South'
+                GROUP BY orderdate, s.region
+                ORDER BY orderdate DESC;
+           """
+cur.execute(queryCmd4)
+conn.commit()
+
+
+results = connection.execute(queryCmd4).fetchall()
+column_names = results[0].keys()
+df4 = pd.DataFrame(results, columns = column_names)
+df4
+
+import matplotlib.pyplot as plt
+fig, axs = plt.subplots(2, 2)
+axs[0, 0].plot(df1["orderdate"],df1["number"])
+axs[0, 0].set_title('Time Series Plot of Midwest')
+axs[0, 1].plot(df2["orderdate"],df2["number"], 'tab:orange')
+axs[0, 1].set_title('Time Series Plot of Northeast')
+axs[1, 0].plot(df3["orderdate"],df3["number"], 'tab:green')
+axs[1, 0].set_title('Time Series Plot of West')
+axs[1, 1].plot(df4["orderdate"],df4["number"], 'tab:red')
+axs[1, 1].set_title('Time Series Plot of South')
+
+for ax in axs.flat:
+    ax.set(xlabel='orderdate', ylabel='ordernumbers')
+
+# Hide x labels and tick labels for top plots and y ticks for right plots.
+for ax in axs.flat:
+    ax.label_outer()
+
+
+#2. What are the top ten best selling products (in terms of order quantity) in each year? 
+
+#2018:
+stmt = """ select orders.order_number, orders.orderDate, 
+                  product.product_name
+           from orders, product
+           where EXTRACT(YEAR FROM orders.orderdate)='2018';
+"""
+#Execute the statement and get the results from the database
+results = connection.execute(stmt).fetchall()
+
+#Extract column names
+column_names = results[0].keys()
+#Store results from the database in a panda DataFrame 
+df3 = pd.DataFrame(results, columns=column_names)
+
+
+df3.groupby('product_name').size()
+
+
+#2019:
+stmt = """ select orders.order_number, orders.orderDate,
+                  product.product_name
+           from orders, product
+           where EXTRACT(YEAR FROM orders.orderdate)='2019';
+"""
+
+#Execute the statement and get the results from the database
+results = connection.execute(stmt).fetchall()
+
+#Extract column names
+column_names = results[0].keys()
+#Store results from the database in a panda DataFrame 
+df4 = pd.DataFrame(results, columns=column_names)
+
+
+df4.groupby('product_name').size()
+
+ 
+
+#2020
+stmt = """ select orders.order_number, orders.orderDate, 
+                  product.product_name
+           from orders, product
+           where EXTRACT(YEAR FROM orders.orderdate)='2020';
+"""
+#Execute the statement and get the results from the database
+results = connection.execute(stmt).fetchall()
+
+
+df5.groupby('product_name').size()
+
+
+
+#3. What proportion of the customers ordered over 165? 
+
+SELECT COUNT(DISTINCT customer_id) FROM orders
+#50
+ 
+WITH a AS
+ (SELECT customer_id AS loyalist FROM orders GROUP BY customer_id HAVING COUNT(order_number) > 165)
+ 
+SELECT ROUND(COUNT(loyalist)/(1.00*50), 2) AS proportion
+FROM a
+
+
+#0.3
+
+
+#4. Which sales team performs the best (involved in most sales) in each year? 
+
+-2018
+SELECT s.sales_teamid, s.salesteam, COUNT(o.order_number) AS number_sales, o.orderdate
+FROM salesteam s, orders o
+WHERE date_part('year',orderdate) = 2018
+GROUP BY s.sales_teamid,o.orderdate
+ORDER BY number_sales DESC, s.sales_teamid ASC;
+
+
+#sales_teamid	salesteam	number_sales	orderdate
+0	1	Adam Hernandez	    21	2018-08-04
+1	10	Jonathan Hawkins	    21	2018-08-04
+2	11	Joshua Little	    21	2018-08-04
+3	12	Carl Nguyen	    21	2018-08-04
+4	13	Todd Roberts        21	2018-08-04
+
+    
+-2019
+SELECT s.sales_teamid, s.salesteam, COUNT(o.order_number) AS number_sales, o.orderdate
+FROM salesteam s, orders o
+WHERE date_part('year',orderdate) = 2019
+GROUP by s.sales_teamid,o.orderdate
+ORDER BY number_sales DESC, s.sales_teamid ASC;
+
+
+sales_teamid	salesteam	number_sales	orderdate
+0	1	Adam Hernandez        20	      2019-05-04
+1	10	Jonathan Hawkins  	20	      2019-05-04
+2	11	Joshua Little		20	      2019-05-04
+3	12	Carl Nguyen		20	      2019-05-04
+4	13	Todd Roberts		20	      2019-05-04
+
+
+-2020
+SELECT s.sales_teamid, s.salesteam, COUNT(o.order_number) AS number_sales, o.orderdate
+FROM salesteam s, orders o
+WHERE date_part('year',orderdate) = 2020
+GROUP BY s.sales_teamid,o.orderdate
+ORDER BY number_sales DESC, s.sales_teamid ASC;
+
+
+#sales_teamid	salesteam	number_sales	orderdate
+0	1	Adam Hernandez        16	     2020-09-21
+1	10	Jonathan Hawkins 	16	     2020-09-21
+2	11	Joshua Little		16	     2020-09-21
+3	12	Carl Nguyen		16	     2020-09-21
+4	13	Todd Roberts		16	     2020-09-21
+
+
+#5. What are the five store locations that have the most orders each year?
+
+SELECT COUNT (order_number) AS total_order, s.storeid,
+FROM orders
+JOIN order_product using (order_number)
+JOIN product using (product_id)
+JOIN product_storelocation using (product_id)
+JOIN store_location s using (storeid)
+GROUP BY s.storeid 
+ORDER BY total_order DESC 
+LIMIT 5;
+
+
+#	total_order	storeid
+0	4645		262
+1	4601		21
+2	4561		26
+3	4489		128
+4	4414		245
+
+
+
+#6. Which sales channel has generated the most profits? 
+stmt = """
+SELECT sales_channel, unitprice, unitcost
+FROM orders;
+"""
+
+#Execute the statement and get the results from the database
+results = connection.execute(stmt).fetchall()
+
+#Extract column names
+column_names = results[0].keys()
+#Store results from the database in a panda DataFrame 
+df = pd.DataFrame(results, columns=column_names)
+df['profit']=df['unitprice']-df['unitcost']
+df.head()
+df.groupby('sales_channel').sum().sort_values(['profit'],ascending=False)
+#In-store has generated the most profit
+
+
+			unitprice	unitcost	profit
+sales_channel			
+In-Store		7487169.60000	4698862.02300	2788307.57700
+Online			5544846.30000	3479394.42000	2065451.88000
+Distributor		3201762.50000	2002160.33000	1199602.17000
+Wholesale		2021952.80000	1261984.46300	759968.33700
+
+
+
+#7. Which state has the most stores?
+
+WITH a AS (SELECT COUNT(storeID) AS number_of_stores, StateCode
+FROM store_location
+GROUP BY StateCode)		   
+SELECT StateCode, number_of_stores
+FROM a
+WHERE number_of_stores = (SELECT MAX(number_of_stores) FROM a);
+
+
+"CA"	74
+
+
+#8. Which region has generated the most profits?
+stmt = """
+SELECT orders.unitprice, orders.unitcost, salesteam.region
+FROM orders 
+JOIN salesteam ON orders.sales_teamid=salesteam.sales_teamid;
+"""
+#Execute the statement and get the results from the database
+results = connection.execute(stmt).fetchall()
+#Extract column names
+column_names = results[0].keys()
+#Store results from the database in a panda DataFrame 
+df2 = pd.DataFrame(results, columns=column_names)
+df2.head()
+
+
+#9. What are the proportions of sales channels accounted for total orders?
+
+WITH total AS
+(SELECT sales_channel, COUNT(order_number) n
+FROM orders
+GROUP BY sales_channel),
+
+tn AS (SELECT COUNT(order_number) t FROM orders)
+
+SELECT sales_channel, round((1.00*n)/(1.00*t),2) AS percentage
+FROM total, tn
+
+
+"Online" 0.30
+"Wholesale" 0.11
+"In-Store" 0.41
+"Distributor" 0.17
+
+
+#10. Which product is the most popular among all the records?
+
+SELECT COUNT (order_number) AS total_order, p.product_id, p.product_name
+FROM orders
+JOIN order_product using (order_number)
+JOIN product p using (product_id)
+GROUP BY p.product_id
+ORDER BY total_order DESC
+LIMIT 1; 
+
+
+   total_order	product_id	 product_name
+0	200	        37		  Platters
+
+
+
